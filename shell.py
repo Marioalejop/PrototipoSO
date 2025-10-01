@@ -42,6 +42,38 @@ class Shell:
             "memstat": self.cmd_memstat,
             "exit": self.cmd_exit,
         }
+        # Diccionario con descripciones de cada comando (incluyendo alias en español)
+        self.descriptions = {
+            # Base
+            "help": "Muestra la lista de comandos disponibles y su descripción.",
+            "ls": "Lista los archivos en el disco virtual.",
+            "cat": "Muestra el contenido de un archivo. Uso: cat <archivo>",
+            "write": "Crea o sobrescribe un archivo. Uso: write <archivo> <contenido>",
+            "rm": "Elimina un archivo del disco virtual. Uso: rm <archivo>",
+            "formatear": "Borra todos los archivos del disco virtual.",
+            "run": "Crea y ejecuta un proceso de ejemplo. Uso: run <nombre_proceso>",
+            "ps": "Muestra la lista de procesos en ejecución.",
+            "kill": "Termina un proceso por su PID. Uso: kill <pid>",
+            "memstat": "Muestra estadísticas de la memoria principal.",
+            "exit": "Cierra el shell.",
+
+            # Alias en español
+            "ayuda": "Muestra la lista de comandos disponibles y su descripción.",
+            "listar": "Lista los archivos en el disco virtual.",
+            "lista": "Lista los archivos en el disco virtual.",
+            "ver": "Muestra el contenido de un archivo. Uso: ver <archivo>",
+            "mostrar": "Muestra el contenido de un archivo. Uso: mostrar <archivo>",
+            "escribir": "Crea o sobrescribe un archivo. Uso: escribir <archivo> <contenido>",
+            "borrar": "Elimina un archivo del disco virtual. Uso: borrar <archivo>",
+            "eliminar": "Elimina un archivo del disco virtual. Uso: eliminar <archivo>",
+            "ejecutar": "Crea y ejecuta un proceso de ejemplo. Uso: ejecutar <nombre_proceso>",
+            "crearproceso": "Crea y ejecuta un proceso de ejemplo. Uso: crearproceso <nombre_proceso>",
+            "procesos": "Muestra la lista de procesos en ejecución.",
+            "terminar": "Termina un proceso por su PID. Uso: terminar <pid>",
+            "memoria": "Muestra estadísticas de la memoria principal.",
+            "salir": "Cierra el shell."
+        }
+
         self._running = False
 
     def start(self):
@@ -70,8 +102,9 @@ class Shell:
     # Comandos
     def cmd_help(self, args: List[str]):
         print("Comandos disponibles:")
-        for k in sorted(self.commands.keys()):
-            print(f" - {k}")
+        for cmd in sorted(self.commands.keys()):
+            desc = self.descriptions.get(cmd, "Sin descripción")
+            print(f" - {cmd:10} {desc}")
 
     def cmd_ls(self, args: List[str]):
         archivos_lista = archivos.listar_archivos()
