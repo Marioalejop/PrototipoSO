@@ -1,6 +1,5 @@
 """
 Módulo: sincronizacion.py
-Responsabilidad: primitivas de sincronización educativas
 Contiene:
 - Clase Semaforo
 - Clase Mutex (basado en threading.Lock)

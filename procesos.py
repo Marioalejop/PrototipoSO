@@ -6,12 +6,19 @@ Componentes:
 - class GestorProcesos: crea, elimina, y programa procesos (round-robin simple).
 
 Se usa una cola de listos (ready). El scheduler ejecuta "quantum" instrucciones por proceso.
+Fixes: Crea 3 procesos demo en iniciar(), integra con Memoria, estados en español.
 """
 import threading
 import itertools
 import time
 from collections import deque
 from typing import Callable, Deque, Dict, List, Optional
+
+# Factory para instrucciones demo (tu original)
+def instruccion_imprimir_factory(mensaje: str):
+    def instr(proceso: Proceso):
+        print(f"[Proceso {proceso.pid} - {proceso.nombre}] {mensaje}")
+    return instr
 
 class Proceso:
     _pid_iter = itertools.count(1)
@@ -20,36 +27,39 @@ class Proceso:
         self.pid = next(Proceso._pid_iter)
         self.nombre = nombre
         self.instrucciones = instrucciones or []
-        self.pc = 0  # contador de programa (índice de instrucción)
-        self.estado = "ready"  # ready, running, waiting, terminated
-        self.tiempo_total = tiempo_total  # tiempo consumido (simulación)
+        self.pc = 0  # contador de programa
+        self.estado = "listo"  # listo, ejecutando, bloqueado, terminado (español para GUI)
+        self.tiempo_total = tiempo_total
         self.metadata = {}
 
     def ejecutar_instruccion(self):
-        """Ejecuta la instrucción actual si existe."""
+        """Ejecuta la instrucción actual. Simula tiempo."""
         if self.pc >= len(self.instrucciones):
             return False
         instr = self.instrucciones[self.pc]
         try:
             instr(self)
         except Exception as e:
-            # Manejo simple de excepción: marcar terminado
-            print(f"[Proceso {self.pid}] Error en instrucción: {e}")
-            self.estado = "terminated"
+            print(f"[Proceso {self.pid}] Error: {e}")
+            self.estado = "terminado"
             return False
         self.pc += 1
+        time.sleep(0.5)  # Simula CPU time (visibilidad en logs/GUI)
+        self.tiempo_total += 0.5
         return True
 
     def is_finished(self) -> bool:
-        return self.pc >= len(self.instrucciones) or self.estado == "terminated"
+        return self.pc >= len(self.instrucciones) or self.estado == "terminado"
 
 
 class GestorProcesos:
     """Gestor y scheduler simple con Round-Robin."""
 
-    def __init__(self, quantum: int = 1):
+    def __init__(self, mem, quantum: int = 2):  # Recibe mem
+        self.mem = mem
         self.quantum = quantum
         self.ready_queue: Deque[Proceso] = deque()
+        self._all_procesos: Dict[int, Proceso] = {}  # Trackea todos
         self.lock = threading.RLock()
         self._running = False
         self._scheduler_thread: Optional[threading.Thread] = None
@@ -58,56 +68,73 @@ class GestorProcesos:
         with self.lock:
             p = Proceso(nombre, instrucciones)
             self.ready_queue.append(p)
+            self._all_procesos[p.pid] = p
+            # Asigna memoria (4 frames)
+            asignados = self.mem.allocate_frames(p.pid, 4)
+            if asignados:
+                p.metadata['frames'] = asignados  # Para uso futuro
+                print(f"Proceso '{nombre}' (PID {p.pid}) creado con frames {asignados}")
+            else:
+                print(f"ERROR: No hay memoria para PID {p.pid}")
             return p
 
-    def listar_procesos(self) -> List[Dict]:
+    def listar_procesos(self) -> List[Dict]:  # Retorna lista de dicts para shell/GUI
         with self.lock:
-            return [{"pid": p.pid, "nombre": p.nombre, "estado": p.estado, "pc": p.pc} for p in list(self.ready_queue)]
+            return [{"pid": p.pid, "nombre": p.nombre, "estado": p.estado, "pc": p.pc} 
+                    for p in self._all_procesos.values()]
 
     def terminar_proceso(self, pid: int) -> bool:
         with self.lock:
-            for p in list(self.ready_queue):
-                if p.pid == pid:
-                    p.estado = "terminated"
-                    try:
-                        self.ready_queue.remove(p)
-                    except ValueError:
-                        pass
-                    return True
+            if pid in self._all_procesos:
+                p = self._all_procesos[pid]
+                p.estado = "terminado"
+                try:
+                    self.ready_queue.remove(p)
+                except ValueError:
+                    pass
+                self.mem.free_frames(pid)  # Libera memoria
+                print(f"Proceso PID {pid} terminado y memoria liberada.")
+                return True
+        print(f"PID {pid} no encontrado.")
         return False
 
     def _schedule_once(self):
-        """Ejecuta un ciclo de scheduling: toma el primer proceso y le da `quantum` instrucciones."""
         with self.lock:
             if not self.ready_queue:
                 return
             p = self.ready_queue.popleft()
-            if p.estado == "terminated":
+            if p.estado == "terminado":
                 return
-            p.estado = "running"
-        # Ejecutar fuera del lock para permitir que otros comandos interactúen
+            p.estado = "ejecutando"
+        # Ejecuta quantum
         for _ in range(self.quantum):
             if p.is_finished():
                 break
             p.ejecutar_instruccion()
-            # Simular que consume algo de tiempo
-            p.tiempo_total += 0.01
         with self.lock:
             if p.is_finished():
-                p.estado = "terminated"
-                # no re-enqueue
+                p.estado = "terminado"
             else:
-                p.estado = "ready"
+                p.estado = "listo"
                 self.ready_queue.append(p)
+            print(f"[Scheduler] Proceso {p.pid} pausado (PC: {p.pc})")
 
     def iniciar(self):
         if self._running:
             return
         self._running = True
+        # Crea 3 procesos demo automáticamente
+        def instr_demo(proceso: Proceso):
+            print(f"[Proceso {proceso.pid} - {proceso.nombre}] Ejecutando instrucción {proceso.pc + 1}/10")
+        instr_list = [instruccion_imprimir_factory(f"Ejecutando...") for _ in range(10)]  # 10 instr cada uno
+        for i, nombre in enumerate(["Proceso1", "Proceso2", "Proceso3"], 1):
+            self.crear_proceso(nombre, instr_list)
+        print("Gestor iniciado con 3 procesos demo. Alternancia comienza...")
+
         def loop():
             while self._running:
                 self._schedule_once()
-                time.sleep(0.01)  # pequeño retraso para evitar CPU spin
+                time.sleep(0.1)  # Evita CPU alta
         self._scheduler_thread = threading.Thread(target=loop, daemon=True)
         self._scheduler_thread.start()
 
@@ -115,22 +142,15 @@ class GestorProcesos:
         self._running = False
         if self._scheduler_thread:
             self._scheduler_thread.join(timeout=1)
-
-
-# Instrucción de ejemplo (puede pasarse al crear procesos)
-
-def instruccion_imprimir_factory(mensaje: str):
-    def instr(proceso: Proceso):
-        print(f"[Proceso {proceso.pid} - {proceso.nombre}] {mensaje}")
-    return instr
+            print("Scheduler detenido.")
 
 
 if __name__ == "__main__":
-    g = GestorProcesos(quantum=2)
-    p1 = g.crear_proceso("p1", instrucciones=[instruccion_imprimir_factory("hola") for _ in range(4)])
-    p2 = g.crear_proceso("p2", instrucciones=[instruccion_imprimir_factory("mundo") for _ in range(3)])
-    g.iniciar()
-    import time
-    time.sleep(0.2)
+    # Test (necesita mem para simular)
+    from memoria import Memoria  # Importa tu memoria
+    m = Memoria(frames=32)
+    g = GestorProcesos(m, quantum=2)
+    g.iniciar()  # Crea 3 demo
+    time.sleep(3)  # Ve alternancia
+    print(g.listar_procesos())  # Lista los 3
     g.detener()
-    print("Listado final:", g.listar_procesos())

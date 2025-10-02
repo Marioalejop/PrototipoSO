@@ -152,7 +152,11 @@ class Shell:
         print(f"Proceso creado con PID {p.pid}")
 
     def cmd_ps(self, args: List[str]):
-        for p in self.gestor.listar_procesos():
+        procesos_lista = self.gestor.listar_procesos()
+        if not procesos_lista:
+            print("No hay procesos en ejecución.")
+            return
+        for p in procesos_lista:
             print(f"PID {p['pid']} - {p['nombre']} - {p['estado']} - PC={p['pc']}")
 
     def cmd_kill(self, args: List[str]):
@@ -168,7 +172,28 @@ class Shell:
         print("Terminó proceso." if ok else "No se encontró PID.")
 
     def cmd_memstat(self, args: List[str]):
-        print(self.mem.status())
+        stats = self.mem.status()
+        print("=== Estado de la Memoria ===")
+        print(f"Marcos totales : {stats['frames_total']}")
+        print(f"Marcos usados  : {stats['frames_used']}")
+        print(f"Marcos libres  : {stats['frames_free']}")
+        print(f"Tamaño de marco: {stats['frame_size']} bytes")
+        # Mapear PID -> nombre (si el gestor lo provee)
+        pid_map = {}
+        try:
+            for p in self.gestor.listar_procesos():
+                pid_map[p['pid']] = p.get('nombre', '?')
+        except Exception:
+            pass
+        print("\nMarcos:")
+        owners = getattr(self.mem, "_owner", {})
+        for i in range(stats['frames_total']):
+            owner = owners.get(i)
+            if owner is None:
+                print(f" {i:3}: libre")
+            else:
+                name = pid_map.get(owner, "?")
+                print(f" {i:3}: PID={owner} / {name}")
 
     def cmd_exit(self, args: List[str]):
         print("Saliendo del shell...")

@@ -35,13 +35,19 @@ class App:
         self.root.geometry("1100x720")
 
         # Backend prototipo
-        self.gestor = procesos.GestorProcesos(quantum=2)
         self.mem = memoria.Memoria(frames=32, frame_size=256)
+        self.gestor = procesos.GestorProcesos(self.mem, quantum=2)
         self.shell = shell.Shell(self.gestor, self.mem)
         try:
-            self.gestor.iniciar()
-        except Exception:
-            pass
+            self.gestor.iniciar()  # Mueve aquí si no está; genera logs inmediatos
+            # Redirige logs del gestor a consola Tkinter
+            if hasattr(self.gestor, 'set_log_callback'):  # Si agregas en procesos.py
+                def log_to_console(msg):
+                    self.console.insert("end", msg + "\n")
+                    self.console.see("end")  # Auto-scroll
+                self.gestor.set_log_callback(log_to_console)
+        except Exception as e:
+            self.console.insert("end", f"Error iniciando gestor: {e}\n")
 
         # Preparar alias ES
         self._add_spanish_aliases()
@@ -245,19 +251,37 @@ class App:
         c = getattr(self, "canvas", None)
         if not c: return
         c.delete("all")
+
+        # --- NUEVO: mostrar estadísticas ---
+        stats = self.mem.status()
+        text_stats = (
+            f"Total: {stats['frames_total']} | "
+            f"Usados: {stats['frames_used']} | "
+            f"Libres: {stats['frames_free']} | "
+            f"Tamaño marco: {stats['frame_size']} bytes"
+        )
+        c.create_text(10, 10, text=text_stats, anchor="w", font=("Consolas", 10, "bold"))
+
+        # Ajustar coordenada Y para no tapar
+        offset_y = 30
         frames = getattr(self.mem, "frames", 32)
         owner = getattr(self.mem, "_owner", {})
         cols, size, pad = 16, 26, 6
         rows = (frames + cols - 1)//cols
         for idx in range(frames):
             r = idx//cols; col = idx%cols
-            x0 = pad + col*(size+pad); y0 = pad + r*(size+pad)
+            x0 = pad + col*(size+pad); y0 = offset_y + pad + r*(size+pad)
             x1, y1 = x0 + size, y0 + size
             pid = owner.get(idx, None)
             fill = "#7bc96f" if pid is None else "#82aaff"
             c.create_rectangle(x0, y0, x1, y1, fill=fill, outline="#333")
-            c.create_text((x0+x1)//2, (y0+y1)//2, text=str(idx), font=("Consolas", 9))
-        yleg = pad + rows*(size+pad) + 8
+            c.create_text((x0+x1)//2, (y0+y1)//2-4, text=str(idx), font=("Consolas", 8))
+            # --- NUEVO: mostrar PID si ocupado ---
+            if pid is not None:
+                c.create_text((x0+x1)//2, (y0+y1)//2+6, text=f"P{pid}", font=("Consolas", 7))
+
+        # leyenda
+        yleg = offset_y + rows*(size+pad) + 8
         c.create_rectangle(pad, yleg, pad+20, yleg+20, fill="#7bc96f", outline="#333")
         c.create_text(pad+26, yleg+10, text="Libre", anchor="w")
         c.create_rectangle(pad+90, yleg, pad+110, yleg+20, fill="#82aaff", outline="#333")

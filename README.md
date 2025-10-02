@@ -55,18 +55,32 @@ Sin dependencias externas para el prototipo básico.
 
 
 **Comandos disponibles**
-Comando (ES)	            Alias clásicos	    Descripción
-ayuda	                    help	            Muestra ayuda.
-listar	                    ls	                Lista archivos del disco virtual.
-ver <archivo>	            cat <archivo>	    Muestra contenido.
-escribir <archivo> "texto"	write	            Crea/sobrescribe con el texto indicado.
-borrar <archivo>	        rm	                Elimina el archivo.
-formatear	                            	    Limpia el sistema de archivos virtual.
-ejecutar [nombre]	        run	                Crea un proceso con nombre (por defecto demo).
-procesos	                ps	                Lista procesos (running + ready si está implementado).
-terminar <pid>	            kill <pid>	        Finaliza un proceso.
-memoria	                    memstat	            Estadísticas/estado de frames.
-salir	                    exit, quit	        Cierra la sesión de shell.
+Comandos disponibles:
+ - ayuda       Muestra la lista de comandos disponibles y su descripción.
+ - borrar      Elimina un archivo del disco virtual. Uso: borrar <archivo>
+ - cat         Muestra el contenido de un archivo. Uso: cat <archivo>
+ - crearproceso Crea y ejecuta un proceso de ejemplo. Uso: crearproceso <nombre_proceso>
+ - ejecutar    Crea y ejecuta un proceso de ejemplo. Uso: ejecutar <nombre_proceso>
+ - eliminar    Elimina un archivo del disco virtual. Uso: eliminar <archivo>
+ - escribir    Crea o sobrescribe un archivo. Uso: escribir <archivo> <contenido>
+ - exit        Cierra el shell.
+ - formatear   Borra todos los archivos del disco virtual.
+ - help        Muestra la lista de comandos disponibles y su descripción.
+ - kill        Termina un proceso por su PID. Uso: kill <pid>
+ - lista       Lista los archivos en el disco virtual.
+ - listar      Lista los archivos en el disco virtual.
+ - ls          Lista los archivos en el disco virtual.
+ - memoria     Muestra estadísticas de la memoria principal.
+ - memstat     Muestra estadísticas de la memoria principal.
+ - mostrar     Muestra el contenido de un archivo. Uso: mostrar <archivo>
+ - procesos    Muestra la lista de procesos en ejecución.
+ - ps          Muestra la lista de procesos en ejecución.
+ - rm          Elimina un archivo del disco virtual. Uso: rm <archivo>
+ - run         Crea y ejecuta un proceso de ejemplo. Uso: run <nombre_proceso>
+ - salir       Cierra el shell.
+ - terminar    Termina un proceso por su PID. Uso: terminar <pid>
+ - ver         Muestra el contenido de un archivo. Uso: ver <archivo>
+ - write       Crea o sobrescribe un archivo. Uso: write <archivo> <contenido>
 
 **Estructura del proyecto**
 

@@ -67,7 +67,11 @@ class Memoria:
             if offset < 0 or offset + size > self.frame_size:
                 return None
             return bytes(self._mem[frame_index][offset:offset+size])
-
+        
+    def frame_owners(self) -> Dict[int, Optional[int]]:
+        """Devuelve copia del mapa frame_index -> pid (None si libre)."""
+        with self._lock:
+            return dict(self._owner)
 
 if __name__ == "__main__":
     m = Memoria(frames=8, frame_size=64)
